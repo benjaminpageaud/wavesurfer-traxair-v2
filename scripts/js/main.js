@@ -108,15 +108,11 @@ WaveSurfer.TraxitV2 = {
 		this.wavesurfer.drawer.on('click', function(pEvent, pProgress) {
 			me.seekTo(pProgress);
 		});
-		me.addAllMarks(trackList.tracks);
 		if(pCallback && typeof pCallback === 'function') pCallback();
 	},
 	onProgress: function() {
 		var lProgress = this.mediaElement.currentTime / this.mediaElement.duration;
 		this.wavesurfer.drawer.progress(lProgress);
-
-    var progressEvent = new Event('progress');
-    document.dispatchEvent(progressEvent);
 	},
 	seekTo: function(pProgress) {
 		this.wavesurfer.drawer.progress(pProgress);
