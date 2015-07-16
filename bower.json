@@ -1,6 +1,7 @@
 {
   "name": "wavesurfer-traxair-v2",
   "version": "0.1.0",
+  "main": "scripts/main.js",
   "authors": [
     "Benjamin <benjamin@trax-air.com>"
   ],
