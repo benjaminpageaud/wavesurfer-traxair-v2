@@ -113,7 +113,7 @@ WaveSurfer.TraxitV2 = {
 	onProgress: function() {
 		var lProgress = this.mediaElement.currentTime / this.mediaElement.duration;
 		this.wavesurfer.drawer.progress(lProgress);
-    this.mediaElement.dispatchEvent(new Event('progress'));
+    document.dispatchEvent(new Event('wavesurferProgress'));
 	},
 	seekTo: function(pProgress) {
 		this.wavesurfer.drawer.progress(pProgress);
