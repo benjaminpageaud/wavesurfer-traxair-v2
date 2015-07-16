@@ -1,0 +1,16 @@
+{
+    "browser"  : true,
+    "curly": true,
+    "eqeqeq": true,
+    "quotmark" : "single",
+    "trailing" : true,
+    "undef"    : true,
+    "predef"   : [
+        "videojs"
+    ],
+    "globals"   : {
+	    "define"   : false,
+	    "console"  : false,
+	    "File"     : false
+    }
+}
