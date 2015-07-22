@@ -191,6 +191,7 @@ var TraxitSurferV2 = {
 
     if(pIdMark === null) {
         var lPlayingMark = document.querySelector('#mark_' + this.idPlayingMark);
+        if(!lPlayingMark) return;
         this.removeClass(lPlayingMark, ' playing');
         var lPlayingIcon = lPlayingMark.querySelector('div');
         this.removeClass(lPlayingIcon, ' playing');
