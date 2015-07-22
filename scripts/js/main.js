@@ -2,195 +2,187 @@
 /* global WaveSurfer, YT */
 
 WaveSurfer.TraxitV2 = {
-	init: function(pWavesurfer) {
-		var wavesurfer = Object.create(pWavesurfer);
+  init: function(pWavesurfer) {
+        this.wavesurfer = pWavesurfer;
+        console.log('init');
+  },
 
-		wavesurfer.init({
-	        height:80,
-	        container: '#waveform',
-	        waveColor: '#FFB499',
-	        progressColor: '#ff661a',
-	        selectionColor: 'transparent',
-	        dragSelection : true,
-	        cursorColor   : 'transparent',
-	        minPxPerSec : 1,
-	        backend: 'MediaElement',
-	        loopSelection: false
-	    });
+  /**
+  * Load a media
+  *   Params :
+  * pSourceType {String} : where the media comes from, ex: 'soundcloud', 'youtube'
+  *   pSource {String} : the media-to-load's url(for Youtube, provide video ID)
+  */
+  load: function(pSourceType, pSource, pWaveform) {
+    console.log('traxit load()')
+    var me = this;
+    var mediaElementReadyEvent = new Event('mediaElementReady');
+    this.mediaElement = {
+        play: function() {},
+        pause: function() {}
+    }
+    //Provide precalculated waveform to wavesurfer
+    this.wavesurfer.backend.peaks = pWaveform;
+    this.wavesurfer.drawBuffer();
 
-	    this.wavesurfer = wavesurfer;
-	},
+    var mediaElement;
+    if(pSourceType === 'soundcloud') {
+      mediaElement = document.createElement('audio');
+      mediaElement.src = pSource;
 
-	/**
-	*	Load a media
-	*   Params :
-	*	pSourceType {String} : where the media comes from, ex: 'soundcloud', 'youtube'
-	* 	pSource {String} : the media-to-load's url(for Youtube, provide video ID)
-	*/
-	load: function(pSourceType, pSource, pWaveform) {
-		var me = this;
-		var mediaElementReadyEvent = new Event('mediaElementReady');
+      console.log('mediaElement created');
+      mediaElement.addEventListener('timeupdate', function() {
+        me.onProgress();
+      });
 
-		//Provide precalculated waveform to wavesurfer
-		this.wavesurfer.backend.peaks = pWaveform;
-		this.wavesurfer.drawBuffer();
+      mediaElement.seekTo = function(pTime) {
+        mediaElement.currentTime = pTime;
+      };
 
-		var mediaElement;
-		if(pSourceType === 'soundcloud') {
-			mediaElement = document.createElement('audio');
-			mediaElement.src = pSource;
+      mediaElement.addEventListener('canplay', function() {
+        me.onMediaElementReady();
+      });
 
-			mediaElement.addEventListener('timeupdate', function() {
-				me.onProgress();
-			});
+      this.mediaElement = mediaElement;
+      document.dispatchEvent(mediaElementReadyEvent);
+    } else if (pSourceType === 'youtube') { 
+      //Loading YT player
+      this.loadYoutubePlayer(pSource);
 
-			mediaElement.seekTo = function(pTime) {
-				mediaElement.currentTime = pTime;
-			};
+      //Fired when youtube player is ready
+        document.addEventListener('youtubeReady', function(pEvent) {
+          //On fait ça propre, on enlève l'écouteur :)
+          document.removeEventListener('youtubeReady');
 
-			mediaElement.addEventListener('canplay', function() {
-				me.onMediaElementReady();
-			});
+          //pEvent.detail contains the instance of the youtube Player
+          mediaElement = pEvent.detail;
 
-			this.mediaElement = mediaElement;
-		} else if (pSourceType === 'youtube') { 
-			//Loading YT player
-			this.loadYoutubePlayer(pSource);
+          var progressInterval; 
+          //Reference to the setInterval which update the waveform
+          //Recreation of a 'timeupdate' event
+          mediaElement.addEventListener('onStateChange',function(pEvent) {
+            console.log(pEvent.data);
+            if(pEvent.data === 1) {
+              progressInterval = setInterval(function() {
+                me.onProgress();
+              }, 100);
+            } else {
+              clearInterval(progressInterval);
+            }
+          });
+          
+          //Creation de la couche d'abstraction youtube pour avoir les mêmes méthodes partout
+          mediaElement.play = function() {
+            mediaElement.playVideo();
+          };
 
-			//Fired when youtube player is ready
-		    document.addEventListener('youtubeReady', function(pEvent) {
-		    	//On fait ça propre, on enlève l'écouteur :)
-		    	document.removeEventListener('youtubeReady');
+          mediaElement.pause = function() {
+            mediaElement.pauseVideo();
+          };
 
-		    	//pEvent.detail contains the instance of the youtube Player
-		    	mediaElement = pEvent.detail;
+          mediaElement.duration = mediaElement.getDuration();
 
-		    	var progressInterval; 
-		    	//Reference to the setInterval which update the waveform
-		    	//Recreation of a 'timeupdate' event
-		    	mediaElement.addEventListener('onStateChange',function(pEvent) {
-		    		console.log(pEvent.data);
-		    		if(pEvent.data === 1) {
-		    			progressInterval = setInterval(function() {
-		    				me.onProgress();
-		    			}, 100);
-		    		} else {
-		    			clearInterval(progressInterval);
-		    		}
-		    	});
-		    	
-		    	//Creation de la couche d'abstraction youtube pour avoir les mêmes méthodes partout
-		    	mediaElement.play = function() {
-		    		this.playVideo();
-		    	};
+          //Création de la prop currentTime qui renvoie le résultat de la fonction getCurrentTime du player youtube
+          Object.defineProperty(mediaElement, 'currentTime', { get: function () { return this.getCurrentTime(); } });
 
-		    	mediaElement.pause = function() {
-		    		this.pauseVideo();
-		    	};
+          me.mediaElement = mediaElement;
+          document.dispatchEvent(mediaElementReadyEvent);
+        });
+    }
 
-		    	mediaElement.duration = mediaElement.getDuration();
+    document.addEventListener('mediaElementReady', function() {
+      me.onMediaElementReady();
+    });
+    
+  },
+  onMediaElementReady: function(pCallback) {
+    var me = this;
+    this.wavesurfer.drawer.on('click', function(pEvent, pProgress) {
+      me.seekTo(pProgress);
+    });
+    if(pCallback && typeof pCallback === 'function') pCallback();
+  },
+  onProgress: function() {
+    var lProgress = this.mediaElement.currentTime / this.mediaElement.duration;
+    this.wavesurfer.drawer.progress(lProgress);
+    this.wavesurfer.fireEvent('progress');
+  },
+  seekTo: function(pProgress) {
+    this.wavesurfer.drawer.progress(pProgress);
+    this.mediaElement.seekTo(pProgress * this.mediaElement.duration);
+    this.mediaElement.play();
+  },
+  addMark: function() {
 
-		    	//Création de la prop currentTime qui renvoie le résultat de la fonction getCurrentTime du player youtube
-		    	Object.defineProperty(mediaElement, 'currentTime', { get: function () { return this.getCurrentTime(); } });
+  },
+  addAllMarks: function(pTracklist) {
+    var me = this;
+    for(var i = 0; i < pTracklist.length; i++) {
+      var lMark = document.createElement('div');
+      var waveformContainer = document.querySelector('#waveform');
+      waveformContainer.appendChild(lMark);
+      lMark.id = 'mark_'+i;
+      lMark.style.width = '1px';
+      lMark.style.height = '100px';
+      lMark.style.position = 'absolute';
+      lMark.style.top = '0px';
 
-		    	me.mediaElement = mediaElement;
-		    	document.dispatchEvent(mediaElementReadyEvent);
-		    });
-		}
+      var leftOffset = pTracklist[i].start / this.mediaElement.duration * waveformContainer.offsetWidth;
+      lMark.style.left = leftOffset + 'px';
+      lMark.style.display = 'inline-block';
+      lMark.style.zIndex = '5';
+      lMark.style.backgroundColor = 'rgb(200, 200, 200)';
 
-		document.addEventListener('mediaElementReady', function() {
-			me.onMediaElementReady();
-		});
-		
-	},
-	onMediaElementReady: function(pCallback) {
-		var me = this;
-		this.wavesurfer.drawer.on('click', function(pEvent, pProgress) {
-			me.seekTo(pProgress);
-		});
-		if(pCallback && typeof pCallback === 'function') pCallback();
-	},
-	onProgress: function() {
-		var lProgress = this.mediaElement.currentTime / this.mediaElement.duration;
-		this.wavesurfer.drawer.progress(lProgress);
-    document.dispatchEvent(new Event('wavesurferProgress'));
-	},
-	seekTo: function(pProgress) {
-		this.wavesurfer.drawer.progress(pProgress);
-		this.mediaElement.seekTo(pProgress * this.mediaElement.duration);
-		this.mediaElement.play();
-	},
-	addMark: function() {
+      var lIcon = document.createElement('div');
+      lMark.appendChild(lIcon);
+      lIcon.style.width = '40px';
+      lIcon.style.height = '40px';
+      lIcon.style.position = 'relative';
+      lIcon.style.top = '100px';
+      lIcon.style.backgroundColor = 'rgb(100, 100, 100)';
+      if(pTracklist[i].track)
+        lIcon.style.backgroundImage = pTracklist[i].track.cover ? 'url("'+ pTracklist[i].track.cover +'")' : 'url("assets/img/notfound.png")';
 
-	},
-	addAllMarks: function(pTracklist) {
-		var me = this;
-		for(var i = 0; i < pTracklist.length; i++) {
-			var lMark = document.createElement('div');
-			var waveformContainer = document.querySelector('#waveform');
-			waveformContainer.appendChild(lMark);
-			lMark.id = 'mark_'+i;
-			lMark.style.width = '1px';
-			lMark.style.height = '100px';
-			lMark.style.position = 'absolute';
-			lMark.style.top = '0px';
+      lIcon.style.backgroundSize = 'contain';
 
-			var leftOffset = pTracklist[i].start / this.mediaElement.duration * waveformContainer.offsetWidth;
-			lMark.style.left = leftOffset + 'px';
-			lMark.style.display = 'inline-block';
-			lMark.style.zIndex = '5';
-			lMark.style.backgroundColor = 'rgb(200, 200, 200)';
+      lIcon.addEventListener('mouseenter', me.onMouseEnterMark);
+      lIcon.addEventListener('mouseout', me.onMouseOutMark);
+    }
+  },
+  onMouseEnterMark: function(pEvent) {
+    pEvent.target.style.width = '80px';
+    pEvent.target.style.height = '80px';
+    pEvent.target.parentNode.style.zIndex = '10';
+    pEvent.target.style.transform = 'translate(0, -50%)';
+  },
+  onMouseOutMark: function(pEvent) {
+    pEvent.target.style.width = '40px';
+    pEvent.target.style.height = '40px';
+    pEvent.target.parentNode.style.zIndex = '5';
+    pEvent.target.style.transform = 'translate(0, 0)';
+  },
+  loadYoutubePlayer: function(pUrl) {
+    var tag = document.createElement('script');
+    tag.src = "http://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    var player;
+      window.onYouTubeIframeAPIReady = function() {
+        player = new YT.Player('yt_player', {
+          height: '0',
+          width: '640',
+          videoId: pUrl,
+          events: {
+            'onReady': onPlayerReady,
+            //'onStateChange': onPlayerStateChange
+          }
+        });
+        
+      }
 
-			var lIcon = document.createElement('div');
-			lMark.appendChild(lIcon);
-			lIcon.style.width = '40px';
-			lIcon.style.height = '40px';
-			lIcon.style.position = 'relative';
-			lIcon.style.top = '100px';
-			lIcon.style.backgroundColor = 'rgb(100, 100, 100)';
-			if(pTracklist[i].track)
-				lIcon.style.backgroundImage = pTracklist[i].track.cover ? 'url("'+ pTracklist[i].track.cover +'")' : 'url("assets/img/notfound.png")';
-
-			lIcon.style.backgroundSize = 'contain';
-
-			lIcon.addEventListener('mouseenter', me.onMouseEnterMark);
-			lIcon.addEventListener('mouseout', me.onMouseOutMark);
-		}
-	},
-	onMouseEnterMark: function(pEvent) {
-		pEvent.target.style.width = '80px';
-		pEvent.target.style.height = '80px';
-		pEvent.target.parentNode.style.zIndex = '10';
-		pEvent.target.style.transform = 'translate(0, -50%)';
-	},
-	onMouseOutMark: function(pEvent) {
-		pEvent.target.style.width = '40px';
-		pEvent.target.style.height = '40px';
-		pEvent.target.parentNode.style.zIndex = '5';
-		pEvent.target.style.transform = 'translate(0, 0)';
-	},
-	loadYoutubePlayer: function(pUrl) {
-		var tag = document.createElement('script');
-		tag.src = "http://www.youtube.com/iframe_api";
-	    var firstScriptTag = document.getElementsByTagName('script')[0];
-	    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-		var player;
-	    window.onYouTubeIframeAPIReady = function() {
-	    	player = new YT.Player('yt_player', {
-	    		height: '0',
-	    		width: '640',
-	    		videoId: pUrl,
-	    		events: {
-	    			'onReady': onPlayerReady,
-	    			//'onStateChange': onPlayerStateChange
-	    		}
-	    	});
-	    	
-	    }
-
-	    function onPlayerReady(event) {
-	    	var ytReadyEvent = new CustomEvent('youtubeReady', {'detail': player});
-	    	document.dispatchEvent(ytReadyEvent);
-	    }
-	}
+      function onPlayerReady(event) {
+        var ytReadyEvent = new CustomEvent('youtubeReady', {'detail': player});
+        document.dispatchEvent(ytReadyEvent);
+      }
+  }
 };
