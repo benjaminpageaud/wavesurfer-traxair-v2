@@ -176,6 +176,7 @@ var TraxitSurferV2 = {
         pElement.className += ' '+pClass;
   },
   removeClass: function(pElement, pClass) {
+    if(!pElement) return;
     var lRegex = new RegExp('(?:^|\s)' + pClass + '(?!\S)', 'g');
     pElement.className = pElement.className.replace(pClass , '');
   },
