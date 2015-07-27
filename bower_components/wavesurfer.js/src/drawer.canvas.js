@@ -105,17 +105,26 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
             cc.beginPath();
             cc.moveTo($, halfH + offsetY);
 
-            for (var i = 0; i < length; i++) {
+            var radius = 4;
+            for (var i = 0; i < length; i++) { //Bottom half
                 var h = Math.round(peaks[i] / max * halfH);
-                cc.lineTo(i * scale + $, halfH + h + offsetY);
+                //cc.lineTo(i * scale + $, halfH + h + offsetY);
+                cc.fillRect(i * scale + $, halfH + h + offsetY, radius, -h);
+                cc.fill();
+                cc.beginPath();
+                cc.arc(i * scale + $ + radius/2, halfH + h + offsetY, radius/2  - 0.2, 0, 2 * Math.PI, false);
             }
 
             cc.lineTo(this.width + $, halfH + offsetY);
             cc.moveTo($, halfH + offsetY);
 
-            for (var i = 0; i < length; i++) {
+            for (var i = 0; i < length; i++) { //Top half waves
                 var h = Math.round(peaks[i] / max * halfH);
-                cc.lineTo(i * scale + $, halfH - h + offsetY);
+                //cc.lineTo(i * scale + $, halfH - h + offsetY);
+                cc.fillRect(i * scale + $, halfH - h + offsetY, radius, h);
+                cc.fill();
+                cc.beginPath();
+                cc.arc(i * scale + $ + radius/2, halfH - h + offsetY, radius/2  - 0.2, 0, 2 * Math.PI, false);
             }
 
             cc.lineTo(this.width + $, halfH + offsetY);
@@ -123,7 +132,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
             cc.fill();
 
             // Always draw a median line
-            cc.fillRect(0, halfH + offsetY - $, this.width, $);
+            //cc.fillRect(0, halfH + offsetY - $, this.width, $);
         }, this);
     },
 
