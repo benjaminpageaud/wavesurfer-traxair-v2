@@ -98,13 +98,15 @@ var TraxitSurferV2 = {
             document.dispatchEvent(mediaElementReadyEvent);
         });
     }
-    document.addEventListener('mediaElementReady', me.onMediaElementReady);
+    document.addEventListener('mediaElementReady', function() {
+      me.onMediaElementReady(); 
+    });
   },
   play: function() {},
   pause: function() {},
   onMediaElementReady: function() {
     var me = this;
-    document.removeEventListener('mediaElementReady', me.onMediaElementReady);
+    //document.removeEventListener('mediaElementReady', me.onMediaElementReady);
     this.duration = this.mediaElement.duration;
     this.wavesurfer.drawer.on('click', function(pEvent, pProgress) {
       me.seekTo(pProgress);
