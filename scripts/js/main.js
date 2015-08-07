@@ -26,6 +26,7 @@ var TraxitSurferV2 = {
     var mediaElement;
     if(pSourceType === 'soundcloud') {
         mediaElement = document.createElement('audio');
+		document.body.appendChild(mediaElement);
         mediaElement.src = pSource;
 
         mediaElement.addEventListener('timeupdate', function() {
