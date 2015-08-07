@@ -154,9 +154,15 @@ var TraxitSurferV2 = {
         waveformContainer.appendChild(lMark);
         lMark.id = 'mark_'+i;
 
-        var leftOffset = pTracklist[i].start / this.duration * waveformContainer.offsetWidth;
+		var leftOffset = pTracklist[i].start / this.duration * waveformContainer.offsetWidth;
         lMark.style.left = leftOffset + 'px';
-
+        
+		//Allows to seek by clicking on the marks
+		lMark.start = pTracklist[i].start;
+        lMark.addEventListener('click', function() {
+          me.seekTo(me.getPercentages(this.start + 1));
+        });
+		
         var lIcon = document.createElement('div');
         this.addClass(lIcon, 'iconMark');
 
